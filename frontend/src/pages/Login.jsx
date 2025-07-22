@@ -14,11 +14,11 @@ const Login = () => {
               <path d="M13 8.5L11 15.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <h2 className="text-3xl font-extrabold text-white mb-1">Welcome to CodeSync</h2>
+          <h2 className="text-3xl font-extrabold text-white mb-1">Welcome to SyncDev</h2>
           <p className="text-[#A1A6C8] text-base font-medium">Collaborative coding platform for developers</p>
         </div>
         <div className="bg-[#23283A] rounded-lg shadow-lg p-6 w-full max-w-md flex flex-col items-center">
-          <h3 className="text-2xl font-bold text-white mb-2">Sign In</h3>
+          <h3 className="text-2xl font-bold text-white mb-2">Sign In to SyncDev</h3>
           <p className="text-[#A1A6C8] text-base mb-6">Choose your preferred method to continue</p>
           <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#377DFF] to-[#8F5CFF] text-white py-3 rounded-lg mb-4 font-semibold shadow-md hover:from-[#377DFF]/90 hover:to-[#8F5CFF]/90 transition text-base">
             <svg className="w-5 h-5" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.3 4.5 29.4 2 24 2 12.9 2 4 10.9 4 22s8.9 20 20 20c11.1 0 20-8.9 20-20 0-1.3-.1-2.7-.3-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 17.1 19.2 14 24 14c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.3 4.5 29.4 2 24 2 15.1 2 7.6 7.6 6.3 14.7z"/><path fill="#FBBC05" d="M24 44c5.4 0 10.3-1.8 14.1-4.9l-6.5-5.3C29.8 37 24 37 24 37c-5.8 0-10.7-3.1-13.3-7.7l-7 5.4C7.6 40.4 15.1 44 24 44z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.7C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.3 4.5 29.4 2 24 2 12.9 2 4 10.9 4 22s8.9 20 20 20c11.1 0 20-8.9 20-20 0-1.3-.1-2.7-.3-4z"/></g></svg>
