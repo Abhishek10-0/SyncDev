@@ -18,3 +18,7 @@
     background-position: 0% 50%;
   }
 }
+
+body {
+  font-family: 'Inter', sans-serif;
+}

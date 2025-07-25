@@ -1,0 +1,21 @@
+// codesync-backend/src/config/db.js
+// This file centralizes the MongoDB connection logic.
+// Updated to use ES module syntax (import/export).
+
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Load environment variables
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('MongoDB Connected...');
+    } catch (err) {
+        console.error(err.message);
+        // Exit process with failure
+        process.exit(1);
+    }
+};
+
+export default connectDB; // Use default export for ES modules
