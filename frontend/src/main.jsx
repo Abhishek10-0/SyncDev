@@ -7,7 +7,7 @@ import App from './App.jsx'; // Note the .jsx extension for Vite
 import './index.css'; // Import your main CSS file (Tailwind CSS)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  // </React.StrictMode>,
 );
