@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './src/config/db.js'; // Import connectDB function
 import app from './src/app.js'; // Import the Express app from app.js
+import { initializeRoomSockets } from './src/sockets/roomSocket.js'; // Import the new socket handler
 // import config from './src/config/index.js'; // Temporarily commenting out config import for direct origin test
 
 // Connect to database
@@ -36,6 +37,9 @@ io.on('connection', (socket) => {
     // You can add more socket event handlers here as we build out features
     // For example: socket.on('joinRoom', (roomId) => { ... });
 });
+
+// Initialize room-specific Socket.IO handlers
+initializeRoomSockets(io); // Pass the io instance to your room socket logic
 
 // Define the port to run on
 const PORT = process.env.PORT || 8000; // Use process.env.PORT directly for now

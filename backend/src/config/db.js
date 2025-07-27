@@ -1,6 +1,3 @@
-// codesync-backend/src/config/db.js
-// This file centralizes the MongoDB connection logic.
-// Uses ES module syntax.
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';

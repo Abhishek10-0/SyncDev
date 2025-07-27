@@ -1,109 +1,141 @@
 // codesync-frontend/src/pages/Dashboard.jsx
 // This component will display the user's dashboard after login/signup.
-// Updated to reflect the provided Dashboard UI image.
+// Updated to handle 'Community' and 'Coding Room' creation distinctly.
+// 'View Room' button now handles joining if user is not a member.
 
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx'; // Import useAuth hook
-import Button from '../components/ui/Button.jsx'; // Import Button component
-import Input from '../components/ui/Input.jsx'; // Import Input component
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
+import Button from '../components/ui/Button.jsx';
+import Input from '../components/ui/Input.jsx';
+import { getRooms, createRoom, joinRoom, leaveRoom } from '../api/roomApi.js';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth(); // Get user and logout function from AuthContext
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  const [rooms, setRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [errorRooms, setErrorRooms] = useState('');
 
-  // Mock data for communities/rooms based on the UI image
-  const communities = [
-    {
-      id: '1',
-      name: 'React Developers',
-      category: 'Frontend',
-      trending: true,
-      description: 'Building amazing UIs with React and TypeScript',
-      contributors: '1,247',
-      rooms: 8,
-      time: '2 hours ago',
-      status: 'Join Room' // Can be 'Join Room' or 'Leave'
-    },
-    {
-      id: '2',
-      name: 'Backend Engineers',
-      category: 'Backend',
-      trending: true,
-      description: 'Node.js, Python, Go, and system design discussions',
-      contributors: '892',
-      rooms: 12,
-      time: '5 minutes ago',
-      status: 'Join Room'
-    },
-    {
-      id: '3',
-      name: 'DevOps & Cloud',
-      category: 'DevOps',
-      description: 'AWS, Docker, Kubernetes, CI/CD best practices',
-      contributors: '634',
-      rooms: 6,
-      time: '1 hour ago',
-      status: 'Join Room'
-    },
-    {
-      id: '4',
-      name: 'Open Source',
-      category: 'Community',
-      trending: true,
-      description: 'Contributing to open source projects together',
-      contributors: '2,103',
-      rooms: 18,
-      time: '30 minutes ago',
-      status: 'Leave' // Example of a joined room
-    },
-    {
-      id: '5',
-      name: 'Machine Learning',
-      category: 'AI/ML',
-      description: 'AI/ML, algorithms, data science, and research',
-      contributors: '766',
-      rooms: 4,
-      time: '3 hours ago',
-      status: 'Join Room'
-    },
-    {
-      id: '6',
-      name: 'Mobile Development',
-      category: 'Mobile',
-      description: 'React Native, Flutter, iOS, and Android development',
-      contributors: '543',
-      rooms: 7,
-      time: '45 minutes ago',
-      status: 'Join Room'
-    },
-  ];
+  // State for the modal and the type of room being created
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [roomTypeToCreate, setRoomTypeToCreate] = useState('coding-room'); // 'community' or 'coding-room'
 
-  const filteredCommunities = communities.filter(community => {
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [newRoomCategory, setNewRoomCategory] = useState('Other');
+  const [newRoomIsPublic, setNewRoomIsPublic] = useState(true);
+  const [createRoomError, setCreateRoomError] = useState('');
+  const [creatingRoom, setCreatingRoom] = useState(false);
+
+
+  const fetchRooms = async () => {
+    setLoadingRooms(true);
+    setErrorRooms('');
+    try {
+      const data = await getRooms(); // Fetches all public rooms, regardless of type
+      setRooms(data);
+    } catch (error) {
+      setErrorRooms('Failed to fetch rooms. Please try again.');
+      console.error('Dashboard fetch rooms error:', error);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const openCreateRoomModal = (type) => {
+    setRoomTypeToCreate(type);
+    setShowCreateRoomModal(true);
+    // Reset form fields when opening modal
+    setNewRoomName('');
+    setNewRoomDescription('');
+    setNewRoomCategory('Other');
+    setNewRoomIsPublic(true);
+    setCreateRoomError('');
+  };
+
+  const handleCreateRoom = async (e) => {
+    e.preventDefault();
+    setCreatingRoom(true);
+    setCreateRoomError('');
+    try {
+      const roomData = {
+        name: newRoomName,
+        description: newRoomDescription,
+        category: newRoomCategory,
+        type: roomTypeToCreate, // Send the determined type to the backend
+        isPublic: newRoomIsPublic,
+      };
+      await createRoom(roomData);
+      setShowCreateRoomModal(false); // Close modal
+      fetchRooms(); // Refresh room list
+    } catch (error) {
+      setCreateRoomError(error.response?.data?.message || 'Failed to create room.');
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
+  const handleJoinLeaveRoom = async (roomId, currentStatus) => {
+    try {
+      if (currentStatus === 'Join Room') {
+        await joinRoom(roomId);
+      } else { // currentStatus === 'Leave'
+        await leaveRoom(roomId);
+      }
+      fetchRooms(); // Refresh room list after action
+    } catch (error) {
+      console.error(`Failed to ${currentStatus === 'Join Room' ? 'join' : 'leave'} room:`, error);
+      // Optionally show a toast/notification
+    }
+  };
+
+  const handleViewRoom = async (community) => {
+    const isMember = community.members.some(member => member._id === user._id);
+    if (!isMember) {
+      try {
+        await joinRoom(community._id);
+        fetchRooms(); // Refresh rooms to update membership status
+      } catch (error) {
+        console.error('Failed to join room before viewing:', error);
+        // Optionally show an error message
+        return; // Prevent navigation if join fails
+      }
+    }
+    navigate(`/room/${community._id}`);
+  };
+
+  const filteredCommunities = rooms.filter(community => {
     const matchesSearch = community.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           community.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = activeFilter === 'All' || community.category === activeFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const categories = ['All', 'Frontend', 'Backend', 'DevOps', 'AI/ML', 'Mobile', 'Community', 'More Filters'];
+  const categories = ['All', 'Frontend', 'Backend', 'DevOps', 'AI/ML', 'Mobile', 'Community', 'Other'];
 
   return (
     <div className="min-h-screen bg-primary-dark text-white p-8">
       {/* Dashboard Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-8 space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-4xl font-bold">Dashboard</h1>
           <p className="text-gray-400">Discover and join developer communities</p>
         </div>
-        <div className="flex space-x-4">
-          <Button variant="primary" className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+          <Button variant="primary" className="flex items-center justify-center space-x-2" onClick={() => openCreateRoomModal('community')}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
             <span>Create Community</span>
           </Button>
-          <Button variant="secondary" className="flex items-center space-x-2">
+          <Button variant="secondary" className="flex items-center justify-center space-x-2" onClick={() => openCreateRoomModal('coding-room')}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
@@ -115,7 +147,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - These will remain static for now, dynamic fetching can be added later */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-secondary-dark p-6 rounded-lg shadow-md flex items-center justify-between">
           <div>
@@ -130,7 +162,7 @@ const Dashboard = () => {
         <div className="bg-secondary-dark p-6 rounded-lg shadow-md flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-400">Active Rooms</h2>
-            <p className="text-4xl font-bold text-white">12</p>
+            <p className="text-4xl font-bold text-white">{rooms.length}</p> {/* Example: show count of fetched rooms */}
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
@@ -180,47 +212,130 @@ const Dashboard = () => {
       </div>
 
       {/* Community Room Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCommunities.length > 0 ? (
-          filteredCommunities.map(community => (
-            <div key={community.id} className="bg-secondary-dark p-6 rounded-lg shadow-md flex flex-col">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-xl font-semibold text-white">{community.name}</h3>
-                {community.trending && (
-                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">Trending</span>
-                )}
-              </div>
-              <p className="text-gray-400 text-sm mb-4 flex-grow">{community.description}</p>
-              <div className="flex justify-between items-center text-gray-400 text-sm mb-4">
-                <div className="flex items-center space-x-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h-2v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2H3a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v11a2 2 0 01-2 2z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 14c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4z" />
-                  </svg>
-                  <span>{community.contributors} contributors</span>
+      <h2 className="text-3xl font-bold mb-6">Discover Communities</h2>
+      {loadingRooms ? (
+        <p className="text-center text-gray-400">Loading rooms...</p>
+      ) : errorRooms ? (
+        <p className="text-center text-red-500">{errorRooms}</p>
+      ) : filteredCommunities.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCommunities.map(community => {
+            const isMember = user && community.members.some(member => member._id === user._id);
+            return (
+              <div key={community._id} className="bg-secondary-dark p-6 rounded-lg shadow-md flex flex-col">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xl font-semibold text-white">{community.name}</h3>
+                  {community.trending && (
+                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">Trending</span>
+                  )}
                 </div>
-                <div className="flex items-center space-x-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
-                  </svg>
-                  <span>{community.rooms} rooms</span>
+                <p className="text-gray-400 text-sm mb-4 flex-grow">{community.description}</p>
+                <div className="flex justify-between items-center text-gray-400 text-sm mb-4">
+                  <div className="flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h-2v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2H3a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v11a2 2 0 01-2 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4z" />
+                    </svg>
+                    <span>{community.members.length} contributors</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
+                    </svg>
+                    <span>{community.activeUsers.length} active</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-gray-500 text-xs">
+                  <span>Created: {new Date(community.createdAt).toLocaleDateString()}</span>
+                  <Button
+                    onClick={() => handleJoinLeaveRoom(community._id, isMember ? 'Leave' : 'Join Room')}
+                    variant={isMember ? 'danger' : 'primary'}
+                    className="py-1 px-3 text-sm"
+                  >
+                    {isMember ? 'Leave' : 'Join Room'}
+                  </Button>
+                  <Button
+                    onClick={() => handleViewRoom(community)}
+                    variant="secondary"
+                    className="py-1 px-3 text-sm ml-2"
+                  >
+                    {isMember ? 'Go to Room' : 'View & Join Room'}
+                  </Button>
                 </div>
               </div>
-              <div className="flex justify-between items-center text-gray-500 text-xs">
-                <span>{community.time}</span>
-                <Button
-                  variant={community.status === 'Leave' ? 'danger' : 'primary'}
-                  className="py-1 px-3 text-sm"
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-gray-400 text-center col-span-full">No communities found matching your criteria.</p>
+      )}
+
+      {/* Create Room Modal */}
+      {showCreateRoomModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-secondary-dark p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">
+              {roomTypeToCreate === 'community' ? 'Create New Community' : 'Create New Coding Room'}
+            </h2>
+            <form onSubmit={handleCreateRoom} className="space-y-4">
+              <Input
+                label="Name"
+                id="roomName"
+                type="text"
+                placeholder={roomTypeToCreate === 'community' ? 'My Awesome Community' : 'My Awesome Project'}
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                required
+              />
+              <Input
+                label="Description"
+                id="roomDescription"
+                type="text"
+                placeholder="A brief description of your room"
+                value={newRoomDescription}
+                onChange={(e) => setNewRoomDescription(e.target.value)}
+                required
+              />
+              <div>
+                <label htmlFor="roomCategory" className="block text-gray-300 text-sm font-bold mb-2">
+                  Category
+                </label>
+                <select
+                  id="roomCategory"
+                  value={newRoomCategory}
+                  onChange={(e) => setNewRoomCategory(e.target.value)}
+                  className="shadow appearance-none border border-gray-700 rounded-md w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-accent-blue transition-colors duration-200"
                 >
-                  {community.status}
+                  {categories.filter(cat => cat !== 'All' && cat !== 'More Filters').map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={newRoomIsPublic}
+                  onChange={(e) => setNewRoomIsPublic(e.target.checked)}
+                  className="form-checkbox h-5 w-5 text-accent-blue rounded border-gray-600 bg-gray-700 focus:ring-accent-blue"
+                />
+                <label htmlFor="isPublic" className="text-gray-300">Public Room</label>
+              </div>
+
+              {createRoomError && <p className="text-red-500 text-sm text-center">{createRoomError}</p>}
+
+              <div className="flex justify-end space-x-4 mt-6">
+                <Button type="button" variant="secondary" onClick={() => setShowCreateRoomModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" disabled={creatingRoom}>
+                  {creatingRoom ? 'Creating...' : (roomTypeToCreate === 'community' ? 'Create Community' : 'Create Room')}
                 </Button>
               </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-400 text-center col-span-full">No communities found matching your criteria.</p>
-        )}
-      </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
